@@ -2,11 +2,14 @@ const Product = require('../models/productSchema');
 const mongoose = require('mongoose');
 
 module.exports.index = (req, res, next) => {
+	const perPage = 9;
+	const pageNumber = req.query.page || 0
 	Product.find()
+		.skip(pageNumber * perPage)
+		.limit(perPage)
 		.select('name price _id productImage')
 		.exec()
 		.then((docs) => {
-			console.log(docs);
 			const response = {
 				count: docs.length,
 				products: docs.map((doc) => {

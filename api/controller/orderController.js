@@ -5,8 +5,7 @@ const Product = require('../models/productSchema');
 
 module.exports.getReq = (req, res, next) => {
 	Order.find()
-		.select('product quantity _id')
-		.populate('product', 'name _id price')
+		.select('_id reciverName reciverPhone orderDate total')
 		.exec()
 		.then((docs) => {
 			res.status(200).json({
@@ -15,7 +14,7 @@ module.exports.getReq = (req, res, next) => {
 					return {
 						_id: doc._id,
 						product: doc.product,
-						quantity: doc.quantity,
+						orderDate: doc.orderDate,
 						request: {
 							type: 'GET',
 							url: 'http://localhost:5000/orders/' + doc._id
@@ -32,39 +31,37 @@ module.exports.getReq = (req, res, next) => {
 };
 
 module.exports.create = (req, res, next) => {
-	Product.findById(req.body.productId)
-		.exec()
-		.then((product) => {
-			if (!product) {
-				return res.status(404).json({
-					message: 'Product not found'
-				});
-			}
-			const order = new Order({
-				_id: mongoose.Types.ObjectId(),
-				product: req.body.productId,
-				quantity: req.body.quantity
-			});
-			return order.save();
-		})
-		.then((result) => {
-			console.log(result);
+	console.log(req.body);
+	const { reciverName, reciverPhone, reciverEmail, reciverAddress, comment, products, total, userId } = req.body;
+	const newOrder = new Order({
+		_id: mongoose.Types.ObjectId(),
+		userId: userId,
+		reciverName: reciverName,
+		reciverPhone: reciverPhone,
+		reciverEmail: reciverEmail,
+		reciverAddress: reciverAddress,
+		comment: comment,
+		products: [ ...products ],
+		total: total
+	});
+	newOrder
+		.save()
+		.then((doc) => {
 			res.status(201).json({
-				message: 'Order stored',
+				message: 'Order successfully',
 				createdOrder: {
-					_id: result._id,
-					product: result.product,
-					quantity: result.quantity
+					...newOrder
 				},
+				document: doc,
 				request: {
 					type: 'GET',
-					url: 'http://localhost:5000/orders/' + result._id
+					url: 'http://localhost:5000/orders/' + newOrder._id
 				}
 			});
 		})
 		.catch((err) => {
-			console.log(err);
-			res.status(500).json({
+			res.status(201).json({
+				message: "Order failed, please make sure your reciver's information is valid",
 				error: err
 			});
 		});
@@ -72,14 +69,12 @@ module.exports.create = (req, res, next) => {
 
 module.exports.showDetail = (req, res, next) => {
 	Order.findById(req.params.orderId)
-		.select('_id product quantity')
-		.populate('product')
 		.exec()
 		.then((order) => {
 			if (!order) {
 				return res.status(404).json({
 					message: 'Order not found'
-				})
+				});
 			}
 			res.status(200).json({
 				order: order,

@@ -2,8 +2,14 @@ const mongoose = require('mongoose');
 const User = require('../models/userSchema');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const localStorage = require('local-storage');
 
 module.exports.createUser = (req, res, next) => {
+	if (!req.body.password.match(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])[0-9a-zA-Z]{8,}$/)) {
+		return res.status(409).json({
+			message: 'Password contain at least 8 characters, 1 number, 1 uppercase and 1 lowercase'
+		});
+	}
 	User.find({ email: req.body.email })
 		.exec()
 		.then((user) => {
@@ -71,12 +77,14 @@ module.exports.login = (req, res, next) => {
 						},
 						process.env.JWT_KEY,
 						{
-							expiresIn: "1h"
+							expiresIn: '1h'
 						}
 					);
+					localStorage.set('jwtToken', token);
 					return res.status(200).json({
 						message: 'Auth successful',
-						token: token
+						token: token,
+						userId: user._id
 					});
 				}
 				res.status(401).json({
